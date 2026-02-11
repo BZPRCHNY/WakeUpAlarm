@@ -10,33 +10,52 @@ final class TelegramService {
     private init() {}
 
     /// Получает все chat_id из последних сообщений боту
-    private func fetchChatIDs(completion: @escaping ([Int64]) -> Void) {
+    private func fetchChatIDs(completion: @escaping ([Int]) -> Void) {
         let urlString = "https://api.telegram.org/bot\(botToken)/getUpdates"
         guard let url = URL(string: urlString) else {
+            print("[TG] Ошибка: неверный URL")
             completion([])
             return
         }
 
         session.dataTask(with: url) { data, _, error in
-            guard let data = data, error == nil else {
-                completion([])
+            if let error = error {
+                print("[TG] Ошибка сети: \(error)")
+                completion(Array(Self.storedChatIDs()))
+                return
+            }
+
+            guard let data = data else {
+                print("[TG] Нет данных")
+                completion(Array(Self.storedChatIDs()))
                 return
             }
 
             do {
-                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let results = json["result"] as? [[String: Any]] else {
+                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    print("[TG] Невалидный JSON")
                     completion([])
                     return
                 }
 
-                var chatIDs = Set<Int64>()
+                print("[TG] Ответ getUpdates: ok=\(json["ok"] ?? "nil")")
+
+                guard let results = json["result"] as? [[String: Any]] else {
+                    print("[TG] Нет result в ответе")
+                    completion([])
+                    return
+                }
+
+                print("[TG] Найдено \(results.count) обновлений")
+
+                var chatIDs = Set<Int>()
 
                 for update in results {
                     if let message = update["message"] as? [String: Any],
                        let chat = message["chat"] as? [String: Any],
-                       let id = chat["id"] as? Int64 {
+                       let id = chat["id"] as? Int {
                         chatIDs.insert(id)
+                        print("[TG] Найден chat_id: \(id)")
                     }
                 }
 
@@ -45,8 +64,10 @@ final class TelegramService {
                 let merged = chatIDs.union(stored)
                 Self.saveChatIDs(merged)
 
+                print("[TG] Всего chat_id для отправки: \(merged.count)")
                 completion(Array(merged))
             } catch {
+                print("[TG] Ошибка парсинга: \(error)")
                 completion(Array(Self.storedChatIDs()))
             }
         }.resume()
@@ -55,7 +76,12 @@ final class TelegramService {
     /// Отправляет фото всем подписчикам бота
     func sendPhotoToAll(image: UIImage, caption: String = "") {
         fetchChatIDs { chatIDs in
-            guard let imageData = image.jpegData(compressionQuality: 0.7) else { return }
+            print("[TG] Отправка фото в \(chatIDs.count) чатов")
+
+            guard let imageData = image.jpegData(compressionQuality: 0.7) else {
+                print("[TG] Ошибка: не удалось конвертировать фото")
+                return
+            }
 
             for chatID in chatIDs {
                 self.sendPhoto(data: imageData, chatID: chatID, caption: caption)
@@ -63,7 +89,7 @@ final class TelegramService {
         }
     }
 
-    private func sendPhoto(data: Data, chatID: Int64, caption: String) {
+    private func sendPhoto(data: Data, chatID: Int, caption: String) {
         let urlString = "https://api.telegram.org/bot\(botToken)/sendPhoto"
         guard let url = URL(string: urlString) else { return }
 
@@ -99,19 +125,27 @@ final class TelegramService {
 
         request.httpBody = body
 
-        session.dataTask(with: request) { _, _, _ in }.resume()
+        session.dataTask(with: request) { data, response, error in
+            if let error = error {
+                print("[TG] Ошибка отправки фото в \(chatID): \(error)")
+                return
+            }
+            if let data = data, let result = String(data: data, encoding: .utf8) {
+                print("[TG] Ответ sendPhoto для \(chatID): \(result)")
+            }
+        }.resume()
     }
 
     // MARK: - Хранение chat_id в UserDefaults
 
     private static let storageKey = "telegram_chat_ids"
 
-    private static func storedChatIDs() -> Set<Int64> {
-        let array = UserDefaults.standard.array(forKey: storageKey) as? [Int64] ?? []
+    private static func storedChatIDs() -> Set<Int> {
+        let array = UserDefaults.standard.array(forKey: storageKey) as? [Int] ?? []
         return Set(array)
     }
 
-    private static func saveChatIDs(_ ids: Set<Int64>) {
+    private static func saveChatIDs(_ ids: Set<Int>) {
         UserDefaults.standard.set(Array(ids), forKey: storageKey)
     }
 }

@@ -1,4 +1,5 @@
 import AVFoundation
+import MediaPlayer
 
 final class AlarmSoundPlayer {
 
@@ -26,6 +27,9 @@ final class AlarmSoundPlayer {
         // Максимальная громкость
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
         try? AVAudioSession.sharedInstance().setActive(true)
+
+        // Выкрутить системную громкость на максимум
+        setSystemVolume(1.0)
 
         let engine = AVAudioEngine()
         let mainMixer = engine.mainMixerNode
@@ -124,5 +128,15 @@ final class AlarmSoundPlayer {
 
     func stopSilentBackground() {
         stopAlarm()
+    }
+
+    /// Устанавливает системную громкость (0.0 - 1.0)
+    private func setSystemVolume(_ volume: Float) {
+        let volumeView = MPVolumeView(frame: .zero)
+        if let slider = volumeView.subviews.first(where: { $0 is UISlider }) as? UISlider {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                slider.value = volume
+            }
+        }
     }
 }
