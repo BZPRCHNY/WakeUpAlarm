@@ -1,0 +1,40 @@
+name: WakeUpAlarm
+options:
+  bundleIdPrefix: com.wakeupalarm
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15.0"
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: 1
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "5.9"
+targets:
+  WakeUpAlarm:
+    type: application
+    platform: iOS
+    sources:
+      - WakeUpAlarm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wakeupalarm.app
+        TARGETED_DEVICE_FAMILY: 1
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    info:
+      path: WakeUpAlarm/Info.plist
+      properties:
+        CFBundleDisplayName: WakeUp!
+        UILaunchStoryboardName: LaunchScreen
+        NSCameraUsageDescription: "Камера нужна для фото при неправильном ответе на будильнике"
+        UIBackgroundModes:
+          - audio
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: "$(PRODUCT_MODULE_NAME).SceneDelegate"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
