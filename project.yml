@@ -25,7 +25,8 @@ targets:
       path: WakeUpAlarm/Info.plist
       properties:
         CFBundleDisplayName: WakeUp!
-        UILaunchStoryboardName: LaunchScreen
+        UILaunchScreen:
+          UIColorName: SystemBackground
         NSCameraUsageDescription: "Камера нужна для фото при неправильном ответе на будильнике"
         UIBackgroundModes:
           - audio
